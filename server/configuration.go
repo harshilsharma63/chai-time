@@ -1,8 +1,6 @@
 package main
 
 import (
-	"reflect"
-
 	"github.com/pkg/errors"
 )
 
@@ -18,6 +16,7 @@ import (
 // If you add non-reference types to your configuration struct, be sure to rewrite Clone as a deep
 // copy appropriate for your types.
 type configuration struct {
+	BotID string
 }
 
 // Clone shallow copies the configuration. Your implementation may require a deep copy if
@@ -54,16 +53,16 @@ func (p *Plugin) setConfiguration(configuration *configuration) {
 	p.configurationLock.Lock()
 	defer p.configurationLock.Unlock()
 
-	if configuration != nil && p.configuration == configuration {
-		// Ignore assignment if the configuration struct is empty. Go will optimize the
-		// allocation for same to point at the same memory address, breaking the check
-		// above.
-		if reflect.ValueOf(*configuration).NumField() == 0 {
-			return
-		}
-
-		panic("setConfiguration called with the existing configuration")
-	}
+	//if configuration != nil && p.configuration == configuration {
+	//	// Ignore assignment if the configuration struct is empty. Go will optimize the
+	//	// allocation for same to point at the same memory address, breaking the check
+	//	// above.
+	//	if reflect.ValueOf(*configuration).NumField() == 0 {
+	//		return
+	//	}
+	//
+	//	//panic("setConfiguration called with the existing configuration")
+	//}
 
 	p.configuration = configuration
 }
@@ -78,6 +77,5 @@ func (p *Plugin) OnConfigurationChange() error {
 	}
 
 	p.setConfiguration(configuration)
-
 	return nil
 }
