@@ -8,6 +8,7 @@ import (
 type Chai struct {
 	API plugin.API
 
-	locationsLock sync.RWMutex
+	locationsLock        sync.RWMutex
+	configLock           sync.RWMutex
+	userSubscriptionLock sync.RWMutex
 }
-

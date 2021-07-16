@@ -1,17 +1,19 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"github.com/mattermost/mattermost-plugin-starter-template/server/chai"
 	"github.com/mattermost/mattermost-server/v5/model"
+	"io/ioutil"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/mattermost/mattermost-server/v5/plugin"
 )
 
 var bot = &model.Bot{
-	Username: "chaibot",
+	Username:    "chaibot",
 	DisplayName: "Chai Bot",
 	Description: "Getting staff to kow each other, one chai at a time",
 }
@@ -27,7 +29,7 @@ type Plugin struct {
 	// setConfiguration for usage.
 	configuration *configuration
 
-	Chai *chai.Chai
+	chai *chai.Chai
 }
 
 func (p *Plugin) OnActivate() error {
@@ -43,7 +45,7 @@ func (p *Plugin) OnActivate() error {
 		return err
 	}
 
-	p.Chai = &chai.Chai{
+	p.chai = &chai.Chai{
 		API: p.API,
 	}
 
@@ -51,14 +53,11 @@ func (p *Plugin) OnActivate() error {
 }
 
 func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
-	p.API.LogInfo("########################################################")
-	p.API.LogInfo(fmt.Sprintf("-%s-", args.Command))
-	p.API.LogInfo("########################################################")
 	if args.Command == "/chai config" {
-
+		return p.ExecuteCommandConfig(args.ChannelId, args.TriggerId)
 	}
 
-	return nil,  nil
+	return nil, nil
 }
 
 func (p *Plugin) ensureBot() error {
@@ -77,18 +76,18 @@ func (p *Plugin) ensureBot() error {
 
 func (p *Plugin) registerSlashCommands() error {
 	return p.API.RegisterCommand(&model.Command{
-		Trigger: "chai",
-		IconURL: "/assets/profile.gif",
+		Trigger:      "chai",
+		IconURL:      "/assets/profile.gif",
 		AutoComplete: true,
-		DisplayName: "display name",
-		Description: "description",
+		DisplayName:  "display name",
+		Description:  "description",
 		AutocompleteData: &model.AutocompleteData{
 			Trigger: "chai",
-			RoleID:      model.SYSTEM_USER_ROLE_ID,
+			RoleID:  model.SYSTEM_USER_ROLE_ID,
 			SubCommands: []*model.AutocompleteData{
 				{
 					Trigger: "config",
-					RoleID:   model.SYSTEM_USER_ROLE_ID,
+					RoleID:  model.SYSTEM_USER_ROLE_ID,
 				},
 			},
 		},
@@ -97,7 +96,50 @@ func (p *Plugin) registerSlashCommands() error {
 
 // ServeHTTP demonstrates a plugin that handles HTTP requests by greeting the world.
 func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "Hello, world!")
+	path := r.URL.Path
+	p.API.LogInfo(path)
+
+	if path == "/saveConfig" {
+		p.handleSaveConfig(c, w, r)
+	}
+}
+
+func (p *Plugin) handleSaveConfig(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
+	body, _ := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+	var request *model.SubmitDialogRequest
+	if err := json.Unmarshal(body, &request); err != nil {
+		p.API.LogError("Error occurred unmarshalling save config API request body", "error", err.Error())
+		http.Error(w, "Error occurred unmarshalling save config API request body", http.StatusInternalServerError)
+		return
+	}
+
+	frequency, err := strconv.Atoi(request.Submission["frequency"].(string))
+	if err != nil {
+		p.API.LogError("Error occurred converting frequency string to number.", "frequencyString", request.Submission["frequency"], "error", err.Error())
+		http.Error(w, "Error occurred converting frequency string to number", http.StatusInternalServerError)
+		return
+	}
+
+	config := chai.Config{
+		ChannelID: request.ChannelId,
+		Frequency: frequency,
+		DayOfWeek: request.Submission["dayOfWeek"].(string),
+	}
+
+	if err := p.chai.SaveConfig(config); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	p.API.SendEphemeralPost(request.UserId, &model.Post{
+		UserId: request.UserId,
+		Message: "Chai Time config has been saved successfully.",
+		ChannelId: request.ChannelId,
+	})
+
+	w.Write(body)
+	w.WriteHeader(http.StatusOK)
 }
 
 // See https://developers.mattermost.com/extend/plugins/server/reference/
