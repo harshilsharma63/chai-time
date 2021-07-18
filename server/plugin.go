@@ -55,6 +55,8 @@ func (p *Plugin) OnActivate() error {
 func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
 	if args.Command == "/chai config" {
 		return p.ExecuteCommandConfig(args.ChannelId, args.TriggerId)
+	} else if args.Command == "/chai join" {
+		return p.ExecuteCommandJoin(args.UserId, args.ChannelId)
 	}
 
 	return nil, nil
@@ -88,6 +90,10 @@ func (p *Plugin) registerSlashCommands() error {
 				{
 					Trigger: "config",
 					RoleID:  model.SYSTEM_USER_ROLE_ID,
+				},
+				{
+					Trigger: "join",
+					RoleID: model.SYSTEM_USER_ROLE_ID,
 				},
 			},
 		},

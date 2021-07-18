@@ -119,12 +119,14 @@ func (c *Chai) SaveConfig(config Config) error {
 		return err
 	}
 
+	// saving config
 	if appErr := c.API.KVSet(configKeyPrefix + config.ChannelID, data); appErr != nil {
 		c.API.LogError("Error occurred saving channel config to KV store.", "channelID", config.ChannelID, "error", appErr.Error())
 		return err
 	}
 
-	return nil
+	// adding channel to enabled channels
+	return c.AddLocation(config.ChannelID)
 }
 
 func (c *Chai) GetConfig(channelID string) (*Config, error) {

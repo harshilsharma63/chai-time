@@ -7,13 +7,14 @@ const (
 )
 
 func (c *Chai) GetLocations() (map[string]bool, error) {
-	c.locationsLock.Lock()
-	defer c.locationsLock.Unlock()
-
 	data, err := c.API.KVGet(locationsKey)
 	if err != nil {
 		c.API.LogError("Error occurred fetching enabled locations. Error: " + err.Error())
 		return nil, err
+	}
+
+	if data == nil || len(data) == 0 {
+		data = []byte("{}")
 	}
 
 	var locations map[string]bool
@@ -26,16 +27,18 @@ func (c *Chai) GetLocations() (map[string]bool, error) {
 }
 
 func (c *Chai) SaveLocations(locations map[string]bool) error {
-	c.locationsLock.Lock()
-	defer c.locationsLock.Unlock()
-
 	data, err := json.Marshal(locations)
 	if err != nil {
 		c.API.LogError("Error occurred marshaling locations data for saving. Error: " + err.Error())
 		return err
 	}
 
-	return c.API.KVSet(locationsKey, data)
+	if err := c.API.KVSet(locationsKey, data); err != nil {
+		c.API.LogError("Error occurred saving locations data to KV store.", "error", err.Error())
+		return err
+	}
+
+	return nil
 }
 
 func (c *Chai) AddLocation(location string) error {
