@@ -126,7 +126,7 @@ func (c *Chai) SaveConfig(config Config) error {
 	}
 
 	// adding channel to enabled channels
-	return c.AddLocation(config.ChannelID)
+	return c.AddChannel(config.ChannelID)
 }
 
 func (c *Chai) GetConfig(channelID string) (*Config, error) {

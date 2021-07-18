@@ -57,6 +57,8 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 		return p.ExecuteCommandConfig(args.ChannelId, args.TriggerId)
 	} else if args.Command == "/chai join" {
 		return p.ExecuteCommandJoin(args.UserId, args.ChannelId)
+	} else if args.Command == "/chai leave" {
+		return p.ExecuteCommandLeave(args.UserId, args.ChannelId)
 	}
 
 	return nil, nil
@@ -93,6 +95,10 @@ func (p *Plugin) registerSlashCommands() error {
 				},
 				{
 					Trigger: "join",
+					RoleID: model.SYSTEM_USER_ROLE_ID,
+				},
+				{
+					Trigger: "leave",
 					RoleID: model.SYSTEM_USER_ROLE_ID,
 				},
 			},

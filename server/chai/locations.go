@@ -6,7 +6,7 @@ const (
 	locationsKey = "locations"
 )
 
-func (c *Chai) GetLocations() (map[string]bool, error) {
+func (c *Chai) GetEnabledChannels() (map[string]bool, error) {
 	data, err := c.API.KVGet(locationsKey)
 	if err != nil {
 		c.API.LogError("Error occurred fetching enabled locations. Error: " + err.Error())
@@ -26,7 +26,20 @@ func (c *Chai) GetLocations() (map[string]bool, error) {
 	return locations, nil
 }
 
-func (c *Chai) SaveLocations(locations map[string]bool) error {
+func (c *Chai) AddChannel(location string) error {
+	c.locationsLock.Lock()
+	defer c.locationsLock.Unlock()
+
+	locations, err := c.GetEnabledChannels()
+	if err != nil {
+		return err
+	}
+
+	locations[location] = true
+	return c.saveEnabledChannels(locations)
+}
+
+func (c *Chai) saveEnabledChannels(locations map[string]bool) error {
 	data, err := json.Marshal(locations)
 	if err != nil {
 		c.API.LogError("Error occurred marshaling locations data for saving. Error: " + err.Error())
@@ -39,17 +52,4 @@ func (c *Chai) SaveLocations(locations map[string]bool) error {
 	}
 
 	return nil
-}
-
-func (c *Chai) AddLocation(location string) error {
-	c.locationsLock.Lock()
-	defer c.locationsLock.Unlock()
-
-	locations, err := c.GetLocations()
-	if err != nil {
-		return err
-	}
-
-	locations[location] = true
-	return c.SaveLocations(locations)
 }

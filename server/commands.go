@@ -20,9 +20,9 @@ func (p *Plugin) ExecuteCommandConfig(channelId, triggerId string) (*model.Comma
 }
 
 func (p *Plugin) ExecuteCommandJoin(userId, channelId string) (*model.CommandResponse, *model.AppError) {
-	enabledChannels, err := p.chai.GetLocations()
+	enabledChannels, err := p.chai.GetEnabledChannels()
 	if err != nil {
-		return model.CommandResponseFromPlainText("Error occurred join channel Chai Time."), nil
+		return model.CommandResponseFromPlainText("Error occurred joining channel Chai Time."), nil
 	}
 
 	found := false
@@ -37,10 +37,36 @@ func (p *Plugin) ExecuteCommandJoin(userId, channelId string) (*model.CommandRes
 		return model.CommandResponseFromPlainText("Channel is not part of Chai Time. Make sure the channel you're trying to join has Chat Time enabled."), nil
 	}
 
-	err = p.chai.SaveUserSubscription(userId, channelId)
+	err = p.chai.AddChannelMember(userId, channelId)
 	if err != nil {
 		return model.CommandResponseFromPlainText("Error occurred join channel Chai Time."), nil
 	}
 
 	return model.CommandResponseFromPlainText("You've successfully joined the channel Chai Time."), nil
+}
+
+func (p *Plugin) ExecuteCommandLeave(userId, channelId string) (*model.CommandResponse, *model.AppError) {
+	enabledChannels, err := p.chai.GetEnabledChannels()
+	if err != nil {
+		return model.CommandResponseFromPlainText("Error occurred leaving channel Chai Time."), nil
+	}
+
+	found := false
+	for location := range enabledChannels {
+		if location == channelId {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return model.CommandResponseFromPlainText("Channel is not part of Chai Time."), nil
+	}
+
+	err = p.chai.RemoveChannelMember(userId, channelId)
+	if err != nil {
+		return model.CommandResponseFromPlainText("Error occurred join channel Chai Time."), nil
+	}
+
+	return model.CommandResponseFromPlainText("You've successfully left the channel Chai Time."), nil
 }
