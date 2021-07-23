@@ -2,14 +2,22 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/mattermost/mattermost-plugin-starter-template/server/chai"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 
+	"github.com/mattermost/mattermost-plugin-api/cluster"
 	"github.com/mattermost/mattermost-server/v5/plugin"
+)
+
+const (
+	// TODO make this 1 hour after testing
+	jobInterval = 30 * time.Second
 )
 
 var bot = &model.Bot{
@@ -30,6 +38,7 @@ type Plugin struct {
 	configuration *configuration
 
 	chai *chai.Chai
+	job  *cluster.Job
 }
 
 func (p *Plugin) OnActivate() error {
@@ -52,6 +61,33 @@ func (p *Plugin) OnActivate() error {
 	return nil
 }
 
+func (p *Plugin) run() error {
+	if p.job != nil {
+		if err := p.job.Close(); err != nil {
+			return err
+		}
+	}
+
+	job, err := cluster.Schedule(
+		p.API,
+		"ChaiTimeScheduler",
+		cluster.MakeWaitForInterval(jobInterval),
+		func() {
+			if err := p.RunJob(); err != nil {
+				p.API.LogError("Failed to Run job", "error", err.Error())
+			}
+		},
+	)
+
+	if err != nil {
+		p.API.LogError(fmt.Sprintf("Unable to schedule job for standup reports. Error: {%s}", err.Error()))
+		return err
+	}
+
+	p.job = job
+	return nil
+}
+
 func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
 	if args.Command == "/chai config" {
 		return p.ExecuteCommandConfig(args.ChannelId, args.TriggerId)
@@ -59,6 +95,10 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 		return p.ExecuteCommandJoin(args.UserId, args.ChannelId)
 	} else if args.Command == "/chai leave" {
 		return p.ExecuteCommandLeave(args.UserId, args.ChannelId)
+	} else if args.Command == "/chai test" {
+		if err := p.RunJob(); err != nil {
+			p.API.LogError("Failed to Run job", "error", err.Error())
+		}
 	}
 
 	return nil, nil
@@ -95,11 +135,11 @@ func (p *Plugin) registerSlashCommands() error {
 				},
 				{
 					Trigger: "join",
-					RoleID: model.SYSTEM_USER_ROLE_ID,
+					RoleID:  model.SYSTEM_USER_ROLE_ID,
 				},
 				{
 					Trigger: "leave",
-					RoleID: model.SYSTEM_USER_ROLE_ID,
+					RoleID:  model.SYSTEM_USER_ROLE_ID,
 				},
 			},
 		},
@@ -145,8 +185,8 @@ func (p *Plugin) handleSaveConfig(c *plugin.Context, w http.ResponseWriter, r *h
 	}
 
 	p.API.SendEphemeralPost(request.UserId, &model.Post{
-		UserId: request.UserId,
-		Message: "Chai Time config has been saved successfully.",
+		UserId:    request.UserId,
+		Message:   "Chai Time config has been saved successfully.",
 		ChannelId: request.ChannelId,
 	})
 
