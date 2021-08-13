@@ -42,7 +42,7 @@ func (c *Chai) saveChannelMembers(channelID string, subscriptions map[string]boo
 		return err
 	}
 
-	if appErr := c.API.KVSet(channelSubscriptionsKeyPrefix + channelID, data); appErr != nil {
+	if appErr := c.API.KVSet(channelSubscriptionsKeyPrefix+channelID, data); appErr != nil {
 		c.API.LogError("Error occurred saving channel subscription data from KV store.", "channelID", channelID, "error", appErr.Error())
 		return errors.New(appErr.Error())
 	}

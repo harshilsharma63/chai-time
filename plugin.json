@@ -22,6 +22,14 @@
     "settings_schema": {
         "header": "",
         "footer": "",
-        "settings": []
+        "settings": [
+            {
+                "key": "headerMessage",
+                "display_name": "Header Message",
+                "type": "longtext",
+                "help_text": "This message will show up above the parings. Markdown is supported.",
+                "default": "Don't forget to reach out to your coffee buddy to arrange for a day/time to meet! :grin: \n**Please note pairings are randomized**, if your pair is repeated you can talk to each other again or pass for this round :blue_heart:"
+            }
+        ]
     }
 }

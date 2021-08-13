@@ -120,7 +120,7 @@ func (c *Chai) SaveConfig(config Config) error {
 	}
 
 	// saving config
-	if appErr := c.API.KVSet(configKeyPrefix + config.ChannelID, data); appErr != nil {
+	if appErr := c.API.KVSet(configKeyPrefix+config.ChannelID, data); appErr != nil {
 		c.API.LogError("Error occurred saving channel config to KV store.", "channelID", config.ChannelID, "error", appErr.Error())
 		return err
 	}

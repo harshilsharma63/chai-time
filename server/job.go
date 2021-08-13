@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -18,7 +17,10 @@ func (p *Plugin) RunJob() error {
 		return err
 	}
 
+	p.API.LogError(fmt.Sprintf("%v", channels))
+
 	for channelId := range channels {
+		p.API.LogDebug("Processing channel " + channelId)
 		channelConfig, err := p.chai.GetChannelConfig(channelId)
 		if err != nil {
 			// no need to log error here as it should be logged in called function.
@@ -26,16 +28,15 @@ func (p *Plugin) RunJob() error {
 			continue
 		}
 
+		p.API.LogError(fmt.Sprintf("%v", channelConfig))
+
 		lastRun, err := p.getChannelLastRun(channelId)
 		if err != nil {
 			continue
 		}
 
-		if time.Now().Sub(*lastRun) < (time.Duration(channelConfig.Frequency) * 7 * 24 * time.Hour) {
-			continue
-		}
-
-		if channelConfig.DayOfWeek != strings.ToLower(time.Now().Format("Monday")) {
+		if time.Now().Sub(*lastRun) >= (time.Hour * 24 * 7 * time.Duration(channelConfig.Frequency)) {
+			p.API.LogDebug("Skipping pairings for channel " + channelId)
 			continue
 		}
 
@@ -44,12 +45,13 @@ func (p *Plugin) RunJob() error {
 			continue
 		}
 
-		pairingPost, err := p.chai.GeneratePairingPost(p.getConfiguration().BotID, channelId, pairings)
+		config := p.getConfiguration()
+		pairingPost, err := p.chai.GeneratePairingPost(BotUserID, channelId, pairings, config.HeaderMessage)
 		if err != nil {
 			continue
 		}
 
-		if _, appErr :=p.API.CreatePost(pairingPost); appErr != nil {
+		if _, appErr := p.API.CreatePost(pairingPost); appErr != nil {
 			p.API.LogError("Error occurred creating pairing post for channel", "channelID", channelId, "error", appErr.Error())
 			continue
 		}
@@ -67,6 +69,10 @@ func (p *Plugin) getChannelLastRun(channelID string) (*time.Time, error) {
 	if appErr != nil {
 		p.API.LogError("Error occurred fetching channel's last run time from KV store.", "channelID", channelID, "error", appErr.Error())
 		return nil, errors.New(appErr.Error())
+	}
+
+	if data == nil || len(data) == 0 {
+		data = []byte("0")
 	}
 
 	seconds, err := strconv.ParseInt(string(data), 10, 64)

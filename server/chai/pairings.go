@@ -2,10 +2,11 @@ package chai
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/pkg/errors"
 	"golang.org/x/exp/rand"
-	"math"
+	"sort"
 	"strings"
 	"time"
 )
@@ -43,8 +44,8 @@ func (c *Chai) GetParing(channelID string) ([][]string, error) {
 
 		memberHistory := history[member]
 
-		minPairings := math.MaxInt64
-		minPairingMembers := []string{}
+		minPairings := map[int]bool{}
+		minPairingMembers := map[int][]string{}
 
 		for otherMember := range history {
 			if member == otherMember || processedMembers[otherMember] == true {
@@ -52,52 +53,77 @@ func (c *Chai) GetParing(channelID string) ([][]string, error) {
 			}
 
 			numPairings := memberHistory[otherMember]
-			if numPairings > minPairings {
-				continue
-			} else if numPairings == minPairings {
-				minPairingMembers = append(minPairingMembers, otherMember)
-			} else {
-				minPairings = numPairings
-				minPairingMembers = []string{otherMember}
-			}
 
+			minPairings[numPairings] = true
+			minPairingMembers[numPairings] = append(minPairingMembers[numPairings], otherMember)
+
+			//if numPairings > minPairings {
+			//	continue
+			//} else if numPairings == minPairings {
+			//	minPairingMembers = append(minPairingMembers, otherMember)
+			//} else {
+			//	minPairings = numPairings
+			//	minPairingMembers = []string{otherMember}
+			//}
 		}
+
+		var sortedMinPairingCounts []int
+		for key := range minPairings {
+			sortedMinPairingCounts = append(sortedMinPairingCounts, key)
+		}
+		sort.Ints(sortedMinPairingCounts)
 
 		rand.Seed(uint64(time.Now().UnixNano()))
 
 		if numMembersLeft == 3 {
+			length := len(minPairingMembers[sortedMinPairingCounts[0]])
+			index := rand.Intn(length)
+			memberA := minPairingMembers[sortedMinPairingCounts[0]][index]
+
+			// remove selected member from array
+			minPairingMembers[sortedMinPairingCounts[0]][index] = minPairingMembers[sortedMinPairingCounts[0]][length-1]
+			minPairingMembers[sortedMinPairingCounts[0]] = minPairingMembers[sortedMinPairingCounts[0]][:length-1]
+
+			x := 0
+			if len(minPairingMembers[sortedMinPairingCounts[0]]) == 0 {
+				x = 1
+			}
+
+			memberB := minPairingMembers[sortedMinPairingCounts[x]][rand.Intn(len(minPairingMembers[sortedMinPairingCounts[x]]))]
+
 			processedMembers[member] = true
-			processedMembers[minPairingMembers[0]] = true
-			processedMembers[minPairingMembers[1]] = true
+			processedMembers[memberA] = true
+			processedMembers[memberB] = true
 
 			pairings = append(pairings, []string{
 				member,
-				minPairingMembers[0],
-				minPairingMembers[1],
+				memberA,
+				memberB,
 			})
 
-			history[member][minPairingMembers[0]] = history[member][minPairingMembers[0]] + 1
-			history[member][minPairingMembers[1]] = history[member][minPairingMembers[1]] + 1
+			history[member][memberA] = history[member][memberA] + 1
+			history[member][memberB] = history[member][memberB] + 1
 
-			history[minPairingMembers[0]][member] = history[minPairingMembers[0]][member] + 1
-			history[minPairingMembers[0]][minPairingMembers[1]] = history[minPairingMembers[0]][minPairingMembers[1]] + 1
+			history[memberA][member] = history[memberA][member] + 1
+			history[memberA][memberB] = history[memberA][memberB] + 1
 
-			history[minPairingMembers[1]][member] = history[minPairingMembers[1]][member] + 1
-			history[minPairingMembers[1]][minPairingMembers[0]] = history[minPairingMembers[1]][minPairingMembers[0]] + 1
+			history[memberB][member] = history[memberB][member] + 1
+			history[memberB][memberA] = history[memberB][memberA] + 1
 
 			numMembersLeft -= 3
 		} else {
+			otherMember := minPairingMembers[sortedMinPairingCounts[0]][rand.Intn(len(minPairingMembers[sortedMinPairingCounts[0]]))]
+
 			processedMembers[member] = true
-			pairedMember := minPairingMembers[rand.Intn(len(minPairingMembers))]
-			processedMembers[pairedMember] = true
+			processedMembers[otherMember] = true
 
 			pairings = append(pairings, []string{
 				member,
-				pairedMember,
+				otherMember,
 			})
 
-			history[member][pairedMember] = history[member][pairedMember] + 1
-			history[pairedMember][member] = history[pairedMember][member] + 1
+			history[member][otherMember] = history[member][otherMember] + 1
+			history[otherMember][member] = history[otherMember][member] + 1
 
 			numMembersLeft -= 2
 		}
@@ -115,6 +141,10 @@ func (c *Chai) getChannelHistory(channelID string) (channelHistory, error) {
 	if appErr != nil {
 		c.API.LogError("Error occurred fetching channel history from KV store.", "channelID", channelID, "error", appErr.Error())
 		return nil, errors.New(appErr.Error())
+	}
+
+	if data == nil || len(data) == 0 {
+		data = []byte("{}")
 	}
 
 	var history map[string]map[string]int
@@ -172,17 +202,30 @@ func (c *Chai) getProcessedMembersTemplate(members map[string]bool) map[string]b
 	return template
 }
 
-func (c *Chai) GeneratePairingPost(authorID, channelId string, pairing [][]string) (*model.Post, error) {
+func (c *Chai) GeneratePairingPost(authorID, channelId string, pairing [][]string, headerMessage string) (*model.Post, error) {
+	channelConfig, err := c.GetConfig(channelId)
+	if err != nil {
+		return nil, err
+	}
+
+	startDate := time.Now()
+	// add channelConfig.Frequency number of weeks to start date
+	endDate := startDate.Add(time.Hour * 24 * 7 * time.Duration(channelConfig.Frequency))
+
+	message := fmt.Sprintf("#### :coffee: New remote coffee time pairings for %s - %s\n", startDate.Format("January 2"), endDate.Format("January 2"))
+	if len(headerMessage) > 0 {
+		message += headerMessage + "\n\n"
+	}
+
 	post := &model.Post{
 		UserId:    authorID,
 		ChannelId: channelId,
-		Message: "#### :coffee: New remote coffee time pairings for July 8 - 22\n" +
-			"Don't forget to reach out to your coffee buddy to arrange for a day/time to meet! :grin: \n" +
-			"**Please note pairings are randomized**, if your pair is repeated you can talk to each other again or pass for this round :blue_heart:\n\n",
+		Message:   message,
 	}
 
-	pairingTable := make([]string, len(pairing)+1)
-	pairingTable[1] = "|---|---|"
+	pairingTable := make([]string, len(pairing)+2)
+	pairingTable[0] = "|Chai Time|"
+	pairingTable[1] = "|---|---|---|"
 
 	for i, pairing := range pairing {
 		row := []string{}
@@ -197,11 +240,7 @@ func (c *Chai) GeneratePairingPost(authorID, channelId string, pairing [][]strin
 		}
 
 		rowString := "|" + strings.Join(row, "|") + "|"
-		if i == 0 {
-			pairingTable[i] = rowString
-		} else {
-			pairingTable[i+1] = rowString
-		}
+		pairingTable[i+2] = rowString
 	}
 
 	post.Message += strings.Join(pairingTable, "\n")

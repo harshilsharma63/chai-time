@@ -144,7 +144,7 @@ watch: server bundle
 ifeq ($(MM_DEBUG),)
 	cd webapp && $(NPM) run build:watch
 else
-	cd webapp && $(NPM) run debug:watch
+	cd webapp && $(NPM) run watch
 endif
 
 ## Installs a previous built plugin with updated webpack assets to a server.

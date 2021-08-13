@@ -16,7 +16,8 @@ import (
 // If you add non-reference types to your configuration struct, be sure to rewrite Clone as a deep
 // copy appropriate for your types.
 type configuration struct {
-	BotID string
+	BotID         string
+	HeaderMessage string `json:"headerMessage"`
 }
 
 // Clone shallow copies the configuration. Your implementation may require a deep copy if
@@ -50,6 +51,11 @@ func (p *Plugin) getConfiguration() *configuration {
 // certainly means that the configuration was modified without being cloned and may result in
 // an unsafe access.
 func (p *Plugin) setConfiguration(configuration *configuration) {
+
+	p.API.LogError("************************************************************************")
+	p.API.LogError(configuration.HeaderMessage)
+	p.API.LogError("************************************************************************")
+
 	p.configurationLock.Lock()
 	defer p.configurationLock.Unlock()
 

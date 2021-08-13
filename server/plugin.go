@@ -16,9 +16,10 @@ import (
 )
 
 const (
-	// TODO make this 1 hour after testing
-	jobInterval = 30 * time.Second
+	jobInterval = 60 * 2 * time.Minute
 )
+
+var BotUserID string
 
 var bot = &model.Bot{
 	Username:    "chaibot",
@@ -58,6 +59,11 @@ func (p *Plugin) OnActivate() error {
 		API: p.API,
 	}
 
+	if err := p.run(); err != nil {
+		p.API.LogError("Failed to schedule scheduled job.", "error", err.Error())
+		return err
+	}
+
 	return nil
 }
 
@@ -89,6 +95,7 @@ func (p *Plugin) run() error {
 }
 
 func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
+	p.API.LogError(args.Command)
 	if args.Command == "/chai config" {
 		return p.ExecuteCommandConfig(args.ChannelId, args.TriggerId)
 	} else if args.Command == "/chai join" {
@@ -97,8 +104,11 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 		return p.ExecuteCommandLeave(args.UserId, args.ChannelId)
 	} else if args.Command == "/chai test" {
 		if err := p.RunJob(); err != nil {
+			return model.CommandResponseFromPlainText(err.Error()), nil
 			p.API.LogError("Failed to Run job", "error", err.Error())
 		}
+
+		return model.CommandResponseFromPlainText("Yo!"), nil
 	}
 
 	return nil, nil
@@ -111,9 +121,7 @@ func (p *Plugin) ensureBot() error {
 		return err
 	}
 
-	config := p.getConfiguration()
-	config.BotID = botID
-	p.setConfiguration(config)
+	BotUserID = botID
 
 	return nil
 }
@@ -139,6 +147,10 @@ func (p *Plugin) registerSlashCommands() error {
 				},
 				{
 					Trigger: "leave",
+					RoleID:  model.SYSTEM_USER_ROLE_ID,
+				},
+				{
+					Trigger: "test",
 					RoleID:  model.SYSTEM_USER_ROLE_ID,
 				},
 			},
