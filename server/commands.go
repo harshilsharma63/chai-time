@@ -1,15 +1,23 @@
 package main
 
 import (
-	"fmt"
-	"github.com/mattermost/mattermost-server/v5/model"
 	"net/http"
+	"strings"
+
+	"github.com/mattermost/mattermost-server/v6/model"
 )
 
-func (p *Plugin) ExecuteCommandConfig(channelId, triggerId string) (*model.CommandResponse, *model.AppError) {
-	p.API.LogInfo(fmt.Sprintf("%t", p.chai == nil))
-	err := p.chai.OpenConfigDialog(channelId, triggerId)
-	p.API.LogInfo(fmt.Sprintf("%t", p.API == nil))
+func (p *Plugin) ExecuteCommandConfig(userID, channelID, triggerId string) (*model.CommandResponse, *model.AppError) {
+	can, appErr := p.CanConfigChannel(userID, channelID)
+	if appErr != nil {
+		return nil, appErr
+	}
+
+	if !can {
+		return model.CommandResponseFromPlainText("You do not have permission to perform this operation."), nil
+	}
+
+	err := p.chai.OpenConfigDialog(channelID, triggerId)
 	if err != nil {
 		p.API.LogError(err.Error())
 		p.API.LogError("Error occurred opening interactive dialog for setting config. Error: " + err.Error())
@@ -19,7 +27,18 @@ func (p *Plugin) ExecuteCommandConfig(channelId, triggerId string) (*model.Comma
 	return model.CommandResponseFromPlainText("Configure Chai Time in the open dialog"), nil
 }
 
-func (p *Plugin) ExecuteCommandJoin(userId, channelId string) (*model.CommandResponse, *model.AppError) {
+func (p *Plugin) CanConfigChannel(userID, channelID string) (bool, *model.AppError) {
+	channelMembers, appErr := p.API.GetChannelMembersByIds(channelID, []string{userID})
+	if appErr != nil || channelMembers == nil || len(*channelMembers) != 1 {
+		p.API.LogError("error occurred fetching user channel roles", "userID", userID, "channelID", channelMembers, "error", appErr)
+		return false, appErr
+	}
+
+	p.API.LogDebug("user roles: " + (*channelMembers)[0].Roles)
+	return strings.Contains((*channelMembers)[0].Roles, model.CHANNEL_ADMIN_ROLE_ID), nil
+}
+
+func (p *Plugin) ExecuteCommandJoin(userID, channelID string) (*model.CommandResponse, *model.AppError) {
 	enabledChannels, err := p.chai.GetEnabledChannels()
 	if err != nil {
 		return model.CommandResponseFromPlainText("Error occurred joining channel Chai Time."), nil
@@ -27,7 +46,7 @@ func (p *Plugin) ExecuteCommandJoin(userId, channelId string) (*model.CommandRes
 
 	found := false
 	for location := range enabledChannels {
-		if location == channelId {
+		if location == channelID {
 			found = true
 			break
 		}
@@ -37,7 +56,7 @@ func (p *Plugin) ExecuteCommandJoin(userId, channelId string) (*model.CommandRes
 		return model.CommandResponseFromPlainText("Channel is not part of Chai Time. Make sure the channel you're trying to join has Chat Time enabled."), nil
 	}
 
-	err = p.chai.AddChannelMember(userId, channelId)
+	err = p.chai.AddChannelMember(userID, channelID)
 	if err != nil {
 		return model.CommandResponseFromPlainText("Error occurred join channel Chai Time."), nil
 	}
@@ -45,7 +64,7 @@ func (p *Plugin) ExecuteCommandJoin(userId, channelId string) (*model.CommandRes
 	return model.CommandResponseFromPlainText("You've successfully joined the channel Chai Time."), nil
 }
 
-func (p *Plugin) ExecuteCommandLeave(userId, channelId string) (*model.CommandResponse, *model.AppError) {
+func (p *Plugin) ExecuteCommandLeave(userID, channelId string) (*model.CommandResponse, *model.AppError) {
 	enabledChannels, err := p.chai.GetEnabledChannels()
 	if err != nil {
 		return model.CommandResponseFromPlainText("Error occurred leaving channel Chai Time."), nil
@@ -63,7 +82,7 @@ func (p *Plugin) ExecuteCommandLeave(userId, channelId string) (*model.CommandRe
 		return model.CommandResponseFromPlainText("Channel is not part of Chai Time."), nil
 	}
 
-	err = p.chai.RemoveChannelMember(userId, channelId)
+	err = p.chai.RemoveChannelMember(userID, channelId)
 	if err != nil {
 		return model.CommandResponseFromPlainText("Error occurred join channel Chai Time."), nil
 	}

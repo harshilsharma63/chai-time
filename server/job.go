@@ -19,9 +19,9 @@ func (p *Plugin) RunJob() error {
 
 	p.API.LogError(fmt.Sprintf("%v", channels))
 
-	for channelId := range channels {
-		p.API.LogDebug("Processing channel " + channelId)
-		channelConfig, err := p.chai.GetChannelConfig(channelId)
+	for channelID := range channels {
+		p.API.LogDebug("Processing channel " + channelID)
+		channelConfig, err := p.chai.GetConfig(channelID)
 		if err != nil {
 			// no need to log error here as it should be logged in called function.
 			// Continue processing for other channels.
@@ -30,33 +30,34 @@ func (p *Plugin) RunJob() error {
 
 		p.API.LogError(fmt.Sprintf("%v", channelConfig))
 
-		lastRun, err := p.getChannelLastRun(channelId)
+		lastRun, err := p.getChannelLastRun(channelID)
 		if err != nil {
 			continue
 		}
 
-		if time.Now().Sub(*lastRun) >= (time.Hour * 24 * 7 * time.Duration(channelConfig.Frequency)) {
-			p.API.LogDebug("Skipping pairings for channel " + channelId)
+		p.API.LogError(time.Now().String() + " " + (*lastRun).String() + " " + strconv.Itoa(channelConfig.Frequency) )
+		if time.Now().Sub(*lastRun) <= (time.Hour * 24 * 7 * time.Duration(channelConfig.Frequency)) {
+			p.API.LogDebug("Skipping pairings for channel " + channelID)
 			continue
 		}
 
-		pairings, err := p.chai.GetParing(channelId)
+		pairings, err := p.chai.GetParing(channelID)
 		if err != nil {
 			continue
 		}
 
 		config := p.getConfiguration()
-		pairingPost, err := p.chai.GeneratePairingPost(BotUserID, channelId, pairings, config.HeaderMessage)
+		pairingPost, err := p.chai.GeneratePairingPost(BotUserID, channelID, pairings, config.HeaderMessage)
 		if err != nil {
 			continue
 		}
 
 		if _, appErr := p.API.CreatePost(pairingPost); appErr != nil {
-			p.API.LogError("Error occurred creating pairing post for channel", "channelID", channelId, "error", appErr.Error())
+			p.API.LogError("Error occurred creating pairing post for channel", "channelID", channelID, "error", appErr.Error())
 			continue
 		}
 
-		if err := p.saveChannelLastRun(channelId, time.Now()); err != nil {
+		if err := p.saveChannelLastRun(channelID, time.Now()); err != nil {
 			continue
 		}
 	}
@@ -71,7 +72,7 @@ func (p *Plugin) getChannelLastRun(channelID string) (*time.Time, error) {
 		return nil, errors.New(appErr.Error())
 	}
 
-	if data == nil || len(data) == 0 {
+	if len(data) == 0 {
 		data = []byte("0")
 	}
 

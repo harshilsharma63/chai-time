@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mattermost/mattermost-plugin-starter-template/server/chai"
-	"github.com/mattermost/mattermost-server/v5/model"
+	"github.com/mattermost/mattermost-server/v6/model"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-plugin-api/cluster"
-	"github.com/mattermost/mattermost-server/v5/plugin"
+	"github.com/mattermost/mattermost-server/v6/plugin"
 )
 
 const (
-	jobInterval = 60 * 2 * time.Minute
+	jobInterval = 120 * time.Minute
 )
 
 var BotUserID string
@@ -97,7 +97,7 @@ func (p *Plugin) run() error {
 func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
 	p.API.LogError(args.Command)
 	if args.Command == "/chai config" {
-		return p.ExecuteCommandConfig(args.ChannelId, args.TriggerId)
+		return p.ExecuteCommandConfig(args.UserId, args.ChannelId, args.TriggerId)
 	} else if args.Command == "/chai join" {
 		return p.ExecuteCommandJoin(args.UserId, args.ChannelId)
 	} else if args.Command == "/chai leave" {

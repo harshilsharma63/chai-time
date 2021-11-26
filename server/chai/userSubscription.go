@@ -58,8 +58,13 @@ func (c *Chai) getChannelMembers(channelID string) (map[string]bool, error) {
 	}
 
 	if data == nil || len(data) == 0 {
+		c.API.LogError("AAAAAAAAAAAAAAAAAAAA")
 		data = []byte("{}")
 	}
+
+	c.API.LogError("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
+	c.API.LogError(string(data))
+	c.API.LogError("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
 
 	var channelMembers map[string]bool
 	if err := json.Unmarshal(data, &channelMembers); err != nil {
@@ -70,18 +75,18 @@ func (c *Chai) getChannelMembers(channelID string) (map[string]bool, error) {
 	return channelMembers, nil
 }
 
-func (c *Chai) GetChannelConfig(channelID string) (*Config, error) {
-	data, appErr := c.API.KVGet(channelSubscriptionsKeyPrefix + channelID)
-	if appErr != nil {
-		c.API.LogError("Error occurred fetching channel subscription data from KV store.", "channelID", channelID, "error", appErr.Error())
-		return nil, errors.New(appErr.Error())
-	}
-
-	var channelSubscription *Config
-	if err := json.Unmarshal(data, &channelSubscription); err != nil {
-		c.API.LogError("Error occurred unmarshalling channel subscription data.", "channelID", channelID, "error", err.Error())
-		return nil, err
-	}
-
-	return channelSubscription, nil
-}
+//func (c *Chai) GetChannelConfig(channelID string) (*Config, error) {
+//	data, appErr := c.API.KVGet(channelSubscriptionsKeyPrefix + channelID)
+//	if appErr != nil {
+//		c.API.LogError("Error occurred fetching channel subscription data from KV store.", "channelID", channelID, "error", appErr.Error())
+//		return nil, errors.New(appErr.Error())
+//	}
+//
+//	var channelSubscription *Config
+//	if err := json.Unmarshal(data, &channelSubscription); err != nil {
+//		c.API.LogError("Error occurred unmarshalling channel subscription data.", "channelID", channelID, "error", err.Error())
+//		return nil, err
+//	}
+//
+//	return channelSubscription, nil
+//}

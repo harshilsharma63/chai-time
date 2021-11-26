@@ -131,7 +131,7 @@ deploy:
 	echo "Deleting existing plugin..." && \
 	http DELETE $(MM_SITEURL)/api/v4/plugins/$(PLUGINNAME) Authorization:"Bearer $$TOKEN" > /dev/null && \
 	echo "Uploading plugin..." && \
-	http --check-status --form POST $(MM_SITEURL)/api/v4/plugins plugin@dist/$(PLUGINNAME)-$(VERSION).tar.gz Authorization:"Bearer $$TOKEN" > /dev/null && \
+	http --check-status --form POST $(MM_SITEURL)/api/v4/plugins plugin@dist/$(PLUGIN_ID)-$(PLUGIN_VERSION).tar.gz Authorization:"Bearer $$TOKEN" > /dev/null && \
 	echo "Enabling uploaded plugin..." && \
 	http POST $(MM_SITEURL)/api/v4/plugins/$(PLUGINNAME)/enable Authorization:"Bearer $$TOKEN" > /dev/null && \
 	echo "Logging out admin user..." && \
