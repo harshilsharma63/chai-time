@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	pluginapi "github.com/mattermost/mattermost-plugin-api"
 	"github.com/mattermost/mattermost-plugin-starter-template/server/chai"
 	"github.com/mattermost/mattermost-server/v6/model"
 	"io/ioutil"
@@ -38,8 +39,9 @@ type Plugin struct {
 	// setConfiguration for usage.
 	configuration *configuration
 
-	chai *chai.Chai
-	job  *cluster.Job
+	chai   *chai.Chai
+	job    *cluster.Job
+	client *pluginapi.Client
 }
 
 func (p *Plugin) OnActivate() error {
@@ -47,6 +49,7 @@ func (p *Plugin) OnActivate() error {
 		return err
 	}
 
+	p.initClient()
 	if err := p.ensureBot(); err != nil {
 		return err
 	}
@@ -65,6 +68,10 @@ func (p *Plugin) OnActivate() error {
 	}
 
 	return nil
+}
+
+func (p *Plugin) initClient() {
+	p.client = pluginapi.NewClient(p.API, p.Driver)
 }
 
 func (p *Plugin) run() error {
@@ -115,7 +122,7 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 }
 
 func (p *Plugin) ensureBot() error {
-	botID, err := p.Helpers.EnsureBot(bot, plugin.ProfileImagePath("/assets/profile.gif"))
+	botID, err := p.client.Bot.EnsureBot(bot, pluginapi.ProfileImagePath("/assets/profile.gif"))
 	if err != nil {
 		p.API.LogError("Error occurred ensuring chaibot exists. Error: " + err.Error())
 		return err
@@ -135,23 +142,23 @@ func (p *Plugin) registerSlashCommands() error {
 		Description:  "description",
 		AutocompleteData: &model.AutocompleteData{
 			Trigger: "chai",
-			RoleID:  model.SYSTEM_USER_ROLE_ID,
+			RoleID:  model.SystemUserRoleId,
 			SubCommands: []*model.AutocompleteData{
 				{
 					Trigger: "config",
-					RoleID:  model.SYSTEM_USER_ROLE_ID,
+					RoleID:  model.SystemUserRoleId,
 				},
 				{
 					Trigger: "join",
-					RoleID:  model.SYSTEM_USER_ROLE_ID,
+					RoleID:  model.SystemUserRoleId,
 				},
 				{
 					Trigger: "leave",
-					RoleID:  model.SYSTEM_USER_ROLE_ID,
+					RoleID:  model.SystemUserRoleId,
 				},
 				{
 					Trigger: "test",
-					RoleID:  model.SYSTEM_USER_ROLE_ID,
+					RoleID:  model.SystemUserRoleId,
 				},
 			},
 		},

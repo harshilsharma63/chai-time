@@ -29,13 +29,13 @@ func (p *Plugin) ExecuteCommandConfig(userID, channelID, triggerId string) (*mod
 
 func (p *Plugin) CanConfigChannel(userID, channelID string) (bool, *model.AppError) {
 	channelMembers, appErr := p.API.GetChannelMembersByIds(channelID, []string{userID})
-	if appErr != nil || channelMembers == nil || len(*channelMembers) != 1 {
+	if appErr != nil || channelMembers == nil || len(channelMembers) != 1 {
 		p.API.LogError("error occurred fetching user channel roles", "userID", userID, "channelID", channelMembers, "error", appErr)
 		return false, appErr
 	}
 
-	p.API.LogDebug("user roles: " + (*channelMembers)[0].Roles)
-	return strings.Contains((*channelMembers)[0].Roles, model.CHANNEL_ADMIN_ROLE_ID), nil
+	p.API.LogDebug("user roles: " + (channelMembers)[0].Roles)
+	return strings.Contains((channelMembers)[0].Roles, model.ChannelAdminRoleId), nil
 }
 
 func (p *Plugin) ExecuteCommandJoin(userID, channelID string) (*model.CommandResponse, *model.AppError) {

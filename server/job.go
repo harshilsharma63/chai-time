@@ -35,7 +35,6 @@ func (p *Plugin) RunJob() error {
 			continue
 		}
 
-		p.API.LogError(time.Now().String() + " " + (*lastRun).String() + " " + strconv.Itoa(channelConfig.Frequency) )
 		if time.Now().Sub(*lastRun) <= (time.Hour * 24 * 7 * time.Duration(channelConfig.Frequency)) {
 			p.API.LogDebug("Skipping pairings for channel " + channelID)
 			continue
