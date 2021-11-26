@@ -121,8 +121,22 @@ dist:	server webapp bundle
 
 ## Builds and installs the plugin to a server.
 .PHONY: deploy
-deploy: dist
-	./build/bin/pluginctl deploy $(PLUGIN_ID) dist/$(BUNDLE_NAME)
+deploy:
+	#./build/bin/pluginctl deploy $(PLUGIN_ID) dist/$(BUNDLE_NAME)
+	echo "Installing plugin via API"
+
+	echo "Authenticating admin user..." && \
+	TOKEN=`http --print h POST $(MM_SITEURL)/api/v4/users/login login_id=$(MM_ADMIN_USERNAME) password=$(MM_ADMIN_PASSWORD) X-Requested-With:"XMLHttpRequest" | grep Token | cut -f2 -d' '` && \
+	http GET $(MM_SITEURL)/api/v4/users/me Authorization:"Bearer $$TOKEN" > /dev/null && \
+	echo "Deleting existing plugin..." && \
+	http DELETE $(MM_SITEURL)/api/v4/plugins/$(PLUGINNAME) Authorization:"Bearer $$TOKEN" > /dev/null && \
+	echo "Uploading plugin..." && \
+	http --check-status --form POST $(MM_SITEURL)/api/v4/plugins plugin@dist/$(PLUGIN_ID)-$(PLUGIN_VERSION).tar.gz Authorization:"Bearer $$TOKEN" > /dev/null && \
+	echo "Enabling uploaded plugin..." && \
+	http POST $(MM_SITEURL)/api/v4/plugins/$(PLUGINNAME)/enable Authorization:"Bearer $$TOKEN" > /dev/null && \
+	echo "Logging out admin user..." && \
+	http POST $(MM_SITEURL)/api/v4/users/logout Authorization:"Bearer $$TOKEN" > /dev/null && \
+	echo "Plugin uploaded successfully"
 
 ## Builds and installs the plugin to a server, updating the webapp automatically when changed.
 .PHONY: watch
@@ -130,7 +144,7 @@ watch: server bundle
 ifeq ($(MM_DEBUG),)
 	cd webapp && $(NPM) run build:watch
 else
-	cd webapp && $(NPM) run debug:watch
+	cd webapp && $(NPM) run watch
 endif
 
 ## Installs a previous built plugin with updated webpack assets to a server.

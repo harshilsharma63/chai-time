@@ -1,11 +1,11 @@
 {
-    "id": "com.mattermost.plugin-starter-template",
-    "name": "Plugin Starter Template",
-    "description": "This plugin serves as a starting point for writing a Mattermost plugin.",
-    "homepage_url": "https://github.com/mattermost/mattermost-plugin-starter-template",
-    "support_url": "https://github.com/mattermost/mattermost-plugin-starter-template/issues",
-    "release_notes_url": "https://github.com/mattermost/mattermost-plugin-starter-template/releases/tag/v0.1.0",
-    "icon_path": "assets/starter-template-icon.svg",
+    "id": "chaitime",
+    "name": "Chai Time",
+    "description": "TODO",
+    "homepage_url": "https://github.com/harshilsharma63/chai-time",
+    "support_url": "https://github.com/harshilsharma63/chai-time/issues",
+    "release_notes_url": "https://github.com/harshilsharma63/chai-time/releases/latest",
+    "icon_path": "assets/profile.gif",
     "version": "0.1.0",
     "min_server_version": "5.12.0",
     "server": {
@@ -22,6 +22,14 @@
     "settings_schema": {
         "header": "",
         "footer": "",
-        "settings": []
+        "settings": [
+            {
+                "key": "headerMessage",
+                "display_name": "Header Message",
+                "type": "longtext",
+                "help_text": "This message will show up above the parings. Markdown is supported.",
+                "default": "Don't forget to reach out to your coffee buddy to arrange for a day/time to meet! :grin: \n**Please note pairings are randomized**, if your pair is repeated you can talk to each other again or pass for this round :blue_heart:"
+            }
+        ]
     }
 }
