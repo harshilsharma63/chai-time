@@ -5,7 +5,7 @@
     "homepage_url": "https://github.com/harshilsharma63/chai-time",
     "support_url": "https://github.com/harshilsharma63/chai-time/issues",
     "release_notes_url": "https://github.com/harshilsharma63/chai-time/releases/latest",
-    "icon_path": "assets/profile.gif",
+    "icon_path": "assets/profile.png",
     "version": "0.1.0",
     "min_server_version": "5.12.0",
     "server": {

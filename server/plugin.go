@@ -122,7 +122,7 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 }
 
 func (p *Plugin) ensureBot() error {
-	botID, err := p.client.Bot.EnsureBot(bot, pluginapi.ProfileImagePath("/assets/profile.gif"))
+	botID, err := p.client.Bot.EnsureBot(bot, pluginapi.ProfileImagePath("/assets/profile.png"))
 	if err != nil {
 		p.API.LogError("Error occurred ensuring chaibot exists. Error: " + err.Error())
 		return err
@@ -136,7 +136,7 @@ func (p *Plugin) ensureBot() error {
 func (p *Plugin) registerSlashCommands() error {
 	return p.API.RegisterCommand(&model.Command{
 		Trigger:      "chai",
-		IconURL:      "/assets/profile.gif",
+		IconURL:      "/assets/profile.png",
 		AutoComplete: true,
 		DisplayName:  "display name",
 		Description:  "description",
